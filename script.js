@@ -1,9 +1,26 @@
-function filterData() {
-event.preventDefault();
-  var startdate = document.getElementById("startdate").value;
-  var enddate = document.getElementById("enddate").value;
-  console.log(startdate);
-  console.log(enddate);
+function filterData(event) {
+  event.preventDefault();
+  
+  // Get the start and end dates
+  var startdate = new Date(document.getElementById("startdate").value);
+  var enddate = new Date(document.getElementById("enddate").value);
+  
+  // Get the table and its rows
+  var table = document.getElementById("dataTable"); // Replace 'dataTable' with your table ID
+  var rows = table.getElementsByTagName("tr");
+
+  // Loop through the rows and hide/show based on date range
+  for (var i = 1; i < rows.length; i++) { // Start at 1 to skip header row
+    var row = rows[i];
+    var dateCell = row.getElementsByTagName("td")[0]; // Assuming date is in the first column
+    var rowDate = new Date(dateCell.innerText);
+
+    if (rowDate >= startdate && rowDate <= enddate) {
+      row.style.display = ""; // Show row
+    } else {
+      row.style.display = "none"; // Hide row
+    }
+  }
 }
 <script>
     async function fetchData() {
