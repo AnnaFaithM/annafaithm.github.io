@@ -22,7 +22,6 @@ function filterData(event) {
     }
   }
 }
-<script>
     async function fetchData() {
         try {
             const response = await fetch('https://compute.samford.edu/zohauth/clients/datajson/1');
@@ -57,4 +56,3 @@ function filterData(event) {
 
     // Fetch the data when the page loads
     window.onload = fetchData;
-</script>
