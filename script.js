@@ -1,5 +1,6 @@
 function filterData(event) {
   event.preventDefault();
+
   
   // Get the start and end dates
   var startdate = new Date(document.getElementById("startdate").value);
