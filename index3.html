@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pitch Stats</title>
+    <style>
+        .blue {
+            color: #0C2340;
+        }
+        .red {
+            color: #BD1F2D;
+        }
+        th {
+            border-bottom: 1px solid gray;
+            cursor: pointer;
+        }
+        th.sorted-asc::after {
+            content: " ▲";
+        }
+        th.sorted-desc::after {
+            content: " ▼";
+        }
+        td {
+            text-align: center;
+        }
+        td.left {
+            text-align: left;
+        }
+        a {
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .stats-row {
+            font-weight: bold;
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <h1 class="blue">Trackman Pitch Stats Viewer</h1>
+    <form onsubmit="filterData(event);">
+        <label>Starting Date</label>
+        <input type="date" id="startdate" />
+        <label> Ending Date</label>
+        <input type="date" id="enddate" />
+        <button type="submit">Filter</button>
+    </form>
+    <table class="red" id="pitchTable">
+        <tr>
+            <th onclick="sortTable(0)">PitchNo</th>
+            <th onclick="sortTable(1)">Date</th>
+            <th onclick="sortTable(2)">Time</th>
+            <th onclick="sortTable(3)">Batter</th>
+            <th onclick="sortTable(4)">Balls</th>
+            <th onclick="sortTable(5)">Strikes</th>
+            <th onclick="sortTable(6)">Outs</th>
+            <th onclick="sortTable(7)">PitchCall</th>
+            <th onclick="sortTable(8)">KorBB</th>
+            <th onclick="sortTable(9)">ReleaseSpeed</th>
+            <th onclick="sortTable(10)">Rotation</th>
+            <th onclick="sortTable(11)">SpinRate</th>
+            <th onclick="sortTable(12)">SpinAxis</th>
+        </tr>
+    </table>
+    <div id="stats"></div>
+
+    <script>
+        function filterData(event) {
+            event.preventDefault();
+            var startdate = new Date(document.getElementById("startdate").value);
+            var enddate = new Date(document.getElementById("enddate").value);
+            var table = document.getElementById("pitchTable");
+            var rows = table.getElementsByTagName("tr");
+
+            for (var i = 1; i < rows.length; i++) {
+                var row = rows[i];
+                var dateCell = row.getElementsByTagName("td")[1]; // Assuming date is in the second column
+                var rowDate = new Date(dateCell.innerText);
+
+                if (rowDate >= startdate && rowDate <= enddate) {
+                    row.style.display = ""; // Show row
+                } else {
+                    row.style.display = "none"; // Hide row
+                }
+            }
+            calculateStatistics();
+        }
+
+        async function fetchData() {
+            try {
+                const response = await fetch('https://compute.samford.edu/zohauth/clients/datajson/1');
+                const data = await response.json();
+                const table = document.getElementById('pitchTable');
+
+                data.forEach(pitch => {
+                    const row = table.insertRow();
+                    const pitchLink = document.createElement('a');
+                    pitchLink.href = `details.html?id=${pitch.PitchNo}`;
+                    pitchLink.textContent = `Pitch ${pitch.PitchNo}`;
+
+                    row.insertCell(0).appendChild(pitchLink);
+                    row.insertCell(1).textContent = pitch.Date;
+                    row.insertCell(2).textContent = pitch.Time;
+                    row.insertCell(3).textContent = pitch.Batter;
+                    row.insertCell(4).textContent = pitch.Balls;
+                    row.insertCell(5).textContent = pitch.Strikes;
+                    row.insertCell(6).textContent = pitch.Outs;
+                    row.insertCell(7).textContent = pitch.PitchCall;
+                    row.insertCell(8).textContent = pitch.KorBB || '';
+                    row.insertCell(9).textContent = pitch.ReleaseSpeed || '';
+                    row.insertCell(10).textContent = pitch.Rotation || '';
+                    row.insertCell(11).textContent = pitch.SpinRate || '';
+                    row.insertCell(12).textContent = pitch.SpinAxis || '';
+                });
+                calculateStatistics(); // Calculate stats on load
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        }
+
+        function calculateStatistics() {
+            const table = document.getElementById("pitchTable");
+            const rows = Array.from(table.rows).slice(1);
+            const stats = {
+                Balls: [],
+                Strikes: [],
+                Outs: [],
+                KorBB: [],
+                ReleaseSpeed: [],
+                Rotation: [],
+                SpinRate: [],
+            };
+
+            rows.forEach(row => {
+                if (row.style.display !== "none") {
+                    stats.Balls.push(Number(row.cells[4].innerText));
+                    stats.Strikes.push(Number(row.cells[5].innerText));
+                    stats.Outs.push(Number(row.cells[6].innerText));
+                    stats.KorBB.push(Number(row.cells[8].innerText) || 0);
+                    stats.ReleaseSpeed.push(Number(row.cells[9].innerText) || 0);
+                    stats.Rotation.push(Number(row.cells[10].innerText) || 0);
+                    stats.SpinRate.push(Number(row.cells[11].innerText) || 0);
+                }
+            });
+
+            const statsDiv = document.getElementById("stats");
+            statsDiv.innerHTML = `<table class="red">
+                <tr class="stats-row">
+                    <td>Mean</td>
+                    <td>${calculateMean(stats.Balls)}</td>
+                    <td>${calculateMean(stats.Strikes)}</td>
+                    <td>${calculateMean(stats.Outs)}</td>
+                    <td>${calculateMean(stats.KorBB)}</td>
+                    <td>${calculateMean(stats.ReleaseSpeed)}</td>
+                    <td>${calculateMean(stats.Rotation)}</td>
+                    <td>${calculateMean(stats.SpinRate)}</td>
+                </tr>
+                <tr class="stats-row">
+                    <td>Median</td>
+                    <td>${calculateMedian(stats.Balls)}</td>
+                    <td>${calculateMedian(stats.Strikes)}</td>
+                    <td>${calculateMedian(stats.Outs)}</td>
+                    <td>${calculateMedian(stats.KorBB)}</td>
+                    <td>${calculateMedian(stats.ReleaseSpeed)}</td>
+                    <td>${calculateMedian(stats.Rotation)}</td>
+                    <td>${calculateMedian(stats.SpinRate)}</td>
+                </tr>
+                <tr class="stats-row">
+                    <td>Mode</td>
+                    <td>${calculateMode(stats.Balls)}</td>
+                    <td>${calculateMode(stats.Strikes)}</td>
+                    <td>${calculateMode(stats.Outs)}</td>
+                    <td>${calculateMode(stats.KorBB)}</td>
+                    <td>${calculateMode(stats.ReleaseSpeed)}</td>
+                    <td>${calculateMode(stats.Rotation)}</td>
+                    <td>${calculateMode(stats.SpinRate)}</td>
+                </tr>
+            </table>`;
+        }
+
+        function calculateMean(arr) {
+            const total = arr.reduce((acc, num) => acc + num, 0);
+            return (total / arr.length).toFixed(2) || 0;
+        }
+
+        function calculateMedian(arr) {
+            const sorted = arr.slice().sort((a, b) => a - b);
+            const mid = Math.floor(sorted.length / 2);
+            return (sorted.length % 2 !== 0) ? sorted[mid] : ((sorted[mid - 1] + sorted[mid]) / 2).toFixed(2) || 0;
+        }
+
+        function calculateMode(arr) {
+            const frequency = {};
+            arr.forEach(num => {
+                frequency[num] = (frequency[num] || 0) + 1;
+            });
+            const maxFreq = Math.max(...Object.values(frequency));
+            const modes = Object.keys(frequency).filter(key => frequency[key] === maxFreq);
+            return modes.length === arr.length ? "No mode" : modes.join(', ');
+        }
+
+        function sortTable(columnIndex) {
+            const table = document.getElementById("pitchTable");
+            const rows = Array.from(table.rows).slice(1);
+            const isAscending = table.querySelector(`th:nth-child(${columnIndex + 1})`).classList.toggle("sorted-asc");
+
+            // Remove existing sort classes
+            Array.from(table.querySelectorAll("th")).forEach((th, index) => {
+                if (index !== columnIndex) {
+                    th.classList.remove("sorted-asc", "sorted-desc");
+                }
+            });
+
+            // Sort rows
+            rows.sort((a, b) => {
+                const cellA = a.cells[columnIndex].innerText;
+                const cellB = b.cells[columnIndex].innerText;
+
+                if (isAscending) {
+                    return cellA > cellB ? 1 : -1;
+                } else {
+                    return cellA < cellB ? 1 : -1;
+                }
+            });
+
+            // Append sorted rows back to the table
+            rows.forEach(row => table.appendChild(row));
+        }
+
+        window.onload = fetchData;
+    </script>
+</body>
+</html>
